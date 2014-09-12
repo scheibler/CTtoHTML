@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os, sys, subprocess, shutil
+import argparse # parse the command line parameters
+
+def find(name, path):
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if name in file:
+                return os.path.join(root, file)
+    return ""
+
+def split_artikle_heading(line):
+    article_heading = ""
+    numbers = []
+    for part in line.split(" "):
+        try:
+            number = int(part.replace(",",""))
+            if number > 1000000000000:
+                numbers.append(str(number))
+            else:
+                article_heading = "%s %s" % (article_heading, part)
+        except ValueError as e:
+            article_heading = "%s %s" % (article_heading, part)
+    return (article_heading.strip(), numbers)
+
+def create_article(line):
+    article_heading, numbers = split_artikle_heading(line)
+    if numbers.__len__() == 0:
+        return ""
+    if find(numbers[0], ct_folder) == "":
+        return ""
+    folder_name = os.path.dirname( find(numbers[0], ct_folder) )
+    article_content = ""
+    for root, dirs, files in os.walk(folder_name):
+        for file in files:
+            if file.endswith("txt"):
+                contents = subprocess.check_output(["pandoc", "-t", "html", os.path.join(root, file)])
+                article_content = "%s\n%s" % (article_content, contents)
+        for file in files:
+            if file.endswith("html"):
+                contents = subprocess.check_output(["pandoc", "-t", "html", os.path.join(root, file)])
+                article_content = "%s\n%s" % (article_content, contents)
+    article_filename = "%s.html" % folder_name.split("/")[-1].split(" ")[0]
+    article_file = open(os.path.join(html_folder, article_filename), "w")
+    article_file.write("%s\n\
+<head>\n\
+<title>%s</title>\n\
+</head>\n\
+<body>\n\
+%s\n\
+</body>\n\
+</html>\n" % (html_header, article_heading, article_content))
+    article_file.close()
+    return "html/%s" % article_filename
+
+##################################
+# create the args parser
+parser = argparse.ArgumentParser(description="CT to HTML converter")
+parser.add_argument("-v", "--version", action="store_true",
+                    help="Get current program version")
+parser.add_argument("ctfolder", nargs="?", default="",
+                    help="Specify the CT source folder")
+# parse the command line arguments
+args = parser.parse_args()
+# version
+if args.version == True:
+    print "CTConverter version 0.2"
+    sys.exit(0)
+# ct folder
+ct_folder = args.ctfolder
+if ct_folder == "":
+    print "The path to the ct folder is empty"
+    sys.exit(1)
+if not os.path.exists(ct_folder):
+    print "The folder %s does not exist" % ct_folder
+    sys.exit(1)
+
+toc_foldername = ""
+for file in os.listdir(ct_folder):
+    if file.find("Inhaltsverzeichnis") > 0:
+        toc_foldername = file
+        break
+toc_filename = find("txt", os.path.join(ct_folder, toc_foldername))
+if toc_filename == "":
+    print "Can't find table of contents"
+    sys.exit(1)
+html_folder = os.path.join(ct_folder, "html")
+if os.path.exists(html_folder):
+    try:
+        shutil.rmtree(html_folder)
+    except OSError as e:
+        print "Can't remove old html folder\n%s" % e
+        sys.exit(1)
+try:
+    os.makedirs(html_folder)
+except OSError as e:
+    print "Can't create html folder\n%s" % e
+    sys.exit(1)
+
+
+toc_file = open(toc_filename, 'r')
+toc = toc_file.read()
+toc_file.close()
+
+ct_title = ct_folder.split("/")[-1].replace("_"," ")
+html_header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n\
+<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"de\">"
+html_toc_file = open(os.path.join(ct_folder, "index.html"), "w")
+html_toc_file.write("%s\n\
+<head>\n\
+<title>%s Inhaltsverzeichnis</title>\n\
+</head>\n\
+<body>\n\
+<h1>%s</h1>\n\n" % (html_header, ct_title, ct_title))
+
+found_start = False
+last_article_filename = ""
+headings = ["aktuell", "Magazin", "Internet", "Software", "Hardware", "Know-how", "Praxis", "Ständige Rubriken"]
+for line in toc.split("\n"):
+    line = line.strip()
+    if line == "":
+        continue
+    if line in headings:
+        if line == headings[0]:
+            html_toc_file.write("<h2>%s</h2>\n<ul>\n" % line)
+            found_start = True
+        else:
+            html_toc_file.write("</ul>\n\n<h2>%s</h2>\n<ul>\n" % line)
+        continue
+    if found_start == True:
+        article_heading, numbers = split_artikle_heading(line)
+        article_filename = create_article(line)
+        if last_article_filename == article_filename:
+            continue
+        if numbers.__len__() == 0 or article_filename == "" or "Inhaltsverzeichnis" in article_heading:
+            html_toc_file.write("<li>%s</li>\n" % article_heading)
+        else:
+            html_toc_file.write("<li><a href=\"%s\">%s</a></li>\n" % (article_filename, article_heading))
+        last_article_filename = article_filename
+
+html_toc_file.write("</ul>\n</body>\n</html>")
+html_toc_file.close()

@@ -1,0 +1,28 @@
+CTtoHTML
+========
+
+Seit vielen Jahren gibt es beim Heise Zeitschriftenverlag das Abo der c't für Sehbehinderte. Die
+Zeitschrift wird alle zwei Wochen per E-Mail als Zip Archiv verteilt. Die Artikel liegen allerdings
+lediglich als einzelne Textdateien vor. Somit ist das Auffinden eines Artikels aus dem
+Inhaltsverzeichnis heraus nicht sehr komfortabel.  Daher habe ich ein kleines Python Skript
+geschrieben, dass ein Inhaltsverzeichnis in HTML Form erstellt und auf die jeweiligen Artikel
+verlinkt. Dadurch ist auch das Lesen per Smartphone bequem möglich, wenn die HTML Dateien auf einem
+Webserver abgelegt werden.
+
+Voraussetzungen:
+
+* Lauffähig unter Linux (getestet mit Debian)
+* [Pandoc](http://johnmacfarlane.net/pandoc/) wird zum Erstellen der HTML Dateien benötigt und kann
+  wie folgt installiert werden: sudo aptitude install pandoc
+
+Die Konversion wird dann folgendermaßen gestartet:
+
+```
+./CTtoHTML.py /pfad/zur/ct-ausgabe/
+```
+
+Anmerkung: Mit der c't Ausgabe 22/2013 wurde das Format der Zeitschrift neu strukturiert. Jeder
+Artikel befindet sich ab sofort in einem eigenen Ordner. Das hier vorgestellte Skript kann nur auf
+diese neue Dateistruktur angewendet werden. Zu der alten Struktur ist es inkompatibel.
+
+c't Abo für Sehbehinderte: http://shop.heise.de/katalog/ct-sehbehinderten-abo
