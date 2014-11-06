@@ -44,14 +44,16 @@ def create_article(line):
                 article_content = "%s\n%s" % (article_content, contents)
     article_filename = "%s.html" % folder_name.split("/")[-1].split(" ")[0]
     article_file = open(os.path.join(html_folder, article_filename), "w")
-    article_file.write("%s\n\
+    article_file.write("<!DOCTYPE html>\n\
+<html lang=\"de\">\n\
 <head>\n\
+<meta charset=\"utf-8\">\n\
 <title>%s</title>\n\
 </head>\n\
 <body>\n\
 %s\n\
 </body>\n\
-</html>\n" % (html_header, article_heading, article_content))
+</html>\n" % (article_heading, article_content))
     article_file.close()
     return "html/%s" % article_filename
 
@@ -105,16 +107,15 @@ toc = toc_file.read()
 toc_file.close()
 
 ct_title = ct_folder.split("/")[-1].replace("_"," ")
-html_header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
-<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n\
-<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"de\">"
 html_toc_file = open(os.path.join(ct_folder, "index.html"), "w")
-html_toc_file.write("%s\n\
+html_toc_file.write("<!DOCTYPE html>\n\
+<html lang=\"de\">\n\
 <head>\n\
+<meta charset=\"utf-8\">\n\
 <title>%s Inhaltsverzeichnis</title>\n\
 </head>\n\
 <body>\n\
-<h1>%s</h1>\n\n" % (html_header, ct_title, ct_title))
+<h1>%s</h1>\n\n" % (ct_title, ct_title))
 
 found_start = False
 last_article_filename = ""
