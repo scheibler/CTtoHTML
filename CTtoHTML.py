@@ -71,13 +71,14 @@ if args.version == True:
     print "CTConverter version 0.2"
     sys.exit(0)
 # ct folder
-ct_folder = args.ctfolder
+ct_folder = os.path.abspath(args.ctfolder)
 if ct_folder == "":
     print "The path to the ct folder is empty"
     sys.exit(1)
 if not os.path.exists(ct_folder):
     print "The folder %s does not exist" % ct_folder
     sys.exit(1)
+print "CT Folder = %s" % ct_folder
 
 toc_foldername = ""
 for file in os.listdir(ct_folder):
