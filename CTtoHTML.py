@@ -27,7 +27,7 @@ def split_artikle_heading(line):
 
 def create_article(line):
     article_heading, numbers = split_artikle_heading(line)
-    if numbers.__len__() == 0:
+    if len(numbers) == 0:
         return ""
     if find(numbers[0], ct_folder) == "":
         return ""
@@ -42,7 +42,7 @@ def create_article(line):
             if file.endswith("html"):
                 contents = subprocess.check_output(["pandoc", "-t", "html", os.path.join(root, file)])
                 article_content = "%s\n%s" % (article_content, contents)
-    article_filename = "%s.html" % folder_name.split("/")[-1].split(" ")[0]
+    article_filename = "%s_%s.html" % (folder_name.split("/")[-1].split(" ")[0], '_'.join(numbers))
     article_file = open(os.path.join(html_folder, article_filename), "w")
     article_file.write("<!DOCTYPE html>\n\
 <html lang=\"de\">\n\
@@ -68,7 +68,7 @@ parser.add_argument("ctfolder", nargs="?", default="",
 args = parser.parse_args()
 # version
 if args.version == True:
-    print "CTConverter version 0.2"
+    print "CTConverter version 0.3"
     sys.exit(0)
 # ct folder
 ct_folder = os.path.abspath(args.ctfolder)
@@ -78,17 +78,7 @@ if ct_folder == "":
 if not os.path.exists(ct_folder):
     print "The folder %s does not exist" % ct_folder
     sys.exit(1)
-print "CT Folder = %s" % ct_folder
 
-toc_foldername = ""
-for file in os.listdir(ct_folder):
-    if file.find("Inhaltsverzeichnis") > 0:
-        toc_foldername = file
-        break
-toc_filename = find("txt", os.path.join(ct_folder, toc_foldername))
-if toc_filename == "":
-    print "Can't find table of contents"
-    sys.exit(1)
 html_folder = os.path.join(ct_folder, "html")
 if os.path.exists(html_folder):
     try:
@@ -102,10 +92,26 @@ except OSError as e:
     print "Can't create html folder\n%s" % e
     sys.exit(1)
 
+toc_foldername = ""
+for file in os.listdir(ct_folder):
+    if file.find("Inhaltsverzeichnis") > 0:
+        toc_foldername = file
+        break
+if toc_foldername == "":
+    print "Can't find table of contents"
+    sys.exit(1)
 
-toc_file = open(toc_filename, 'r')
-toc = toc_file.read()
-toc_file.close()
+toc_content_list = []
+for f in os.listdir(os.path.join(ct_folder, toc_foldername)):
+    if f.endswith(".txt"):
+        toc_file = open(os.path.join(ct_folder, toc_foldername, f), 'r')
+        toc_content_list.append(toc_file.read())
+        toc_file.close()
+if len(toc_content_list) == 0:
+    print "Can't find table of contents"
+    sys.exit(1)
+else:
+    toc = '\n\n'.join(toc_content_list)
 
 ct_title = ct_folder.split("/")[-1].replace("_"," ")
 html_toc_file = open(os.path.join(ct_folder, "index.html"), "w")
@@ -118,30 +124,31 @@ html_toc_file.write("<!DOCTYPE html>\n\
 <body>\n\
 <h1>%s</h1>\n\n" % (ct_title, ct_title))
 
+headings = [
+        "aktuell", "Magazin", "Internet", "Software", "Hardware", "Know-how",
+        "Praxis", "Ständige Rubriken", "Trends & News", "Test & Kaufberatung",
+        "Wissen", "Praxis & Tipps", "Rubriken"
+]
 found_start = False
-last_article_filename = ""
-headings = ["aktuell", "Magazin", "Internet", "Software", "Hardware", "Know-how", "Praxis", "Ständige Rubriken"]
 for line in toc.split("\n"):
     line = line.strip()
     if line == "":
         continue
     if line in headings:
-        if line == headings[0]:
+        if not found_start:
             html_toc_file.write("<h2>%s</h2>\n<ul>\n" % line)
             found_start = True
         else:
             html_toc_file.write("</ul>\n\n<h2>%s</h2>\n<ul>\n" % line)
         continue
-    if found_start == True:
+    if found_start:
         article_heading, numbers = split_artikle_heading(line)
-        article_filename = create_article(line)
-        if last_article_filename == article_filename:
-            continue
-        if numbers.__len__() == 0 or article_filename == "" or "Inhaltsverzeichnis" in article_heading:
-            html_toc_file.write("<li>%s</li>\n" % article_heading)
-        else:
-            html_toc_file.write("<li><a href=\"%s\">%s</a></li>\n" % (article_filename, article_heading))
-        last_article_filename = article_filename
+        if article_heading != "":
+            article_filename = create_article(line)
+            if article_filename == "" or "Inhaltsverzeichnis" in article_heading:
+                html_toc_file.write("<li>%s</li>\n" % article_heading)
+            else:
+                html_toc_file.write("<li><a href=\"%s\">%s</a></li>\n" % (article_filename, article_heading))
 
 html_toc_file.write("</ul>\n</body>\n</html>")
 html_toc_file.close()
